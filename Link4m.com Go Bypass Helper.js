@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Link4m.com Go Bypass Helper
 // @namespace    http://tampermonkey.net/
-// @version      1.1
+// @version      1.1.1
 // @description  Hỗ trợ tự động hóa lấy mã và điền mã cho link4m.com/go/
 // @match        https://link4m.com/go/*
 // @icon         https://link4m.com/templates/default/IteckTheme/assets/img/thumb.jpg
@@ -26,13 +26,22 @@ async function ocrImageFromSelector(selector) {
     return result.data.text.trim();
 }
 
-// Ví dụ sử dụng: Đọc từ khóa từ ảnh đầu tiên trên trang
+// Đọc văn bản từ ảnh có trong .text-center
 async function getKeywordFromImage() {
-    let text = await ocrImageFromSelector('img');
+    // Đợi Tesseract.js load
+    while (!window.Tesseract) await new Promise(r => setTimeout(r, 200));
+    // Lấy đúng ảnh trong .text-center
+    let img = document.querySelector('.text-center img');
+    if (!img) return null;
+    // Nếu ảnh chưa load xong, đợi
+    if (!img.complete) await new Promise(r => { img.onload = r; });
+    let result = await Tesseract.recognize(img, 'eng');
+    let text = result.data.text.trim();
     if (text) {
-        alert('Từ khóa nhận diện từ ảnh: ' + text);
+        alert('Văn bản nhận diện từ ảnh: ' + text);
         // Có thể tự động tìm kiếm Google, mở tab, v.v.
     }
+    return text;
 }
 
 (function() {
@@ -105,7 +114,7 @@ async function getKeywordFromImage() {
     // 7. Hiển thị hướng dẫn
     setTimeout(showHelper, 1500);
 
-    // Gọi thử hàm này khi cần (ví dụ sau khi trang load xong)
-    setTimeout(getKeywordFromImage, 2500);
+    // Gọi hàm này sau khi trang load xong
+    setTimeout(getKeywordFromImage, 2000);
 
 })();
